@@ -1,4 +1,5 @@
-let counter = 0; 
+let counter = 0;
+const params = input("Podaj parametry a, b, c, d dla funkcji").split(' ');
 
 const generateChromosomes = (amount, length) => {
     return chromosomes = Array(amount).fill(0).map((chromosome, i) => {
@@ -12,10 +13,9 @@ const calcFenotypes = (chromosomes) => {
     })
 }
 
-const calcAdaptation = (chromosomes, a = 2, b = 1) => {
+const calcAdaptation = (chromosomes) => {
     return chromosomes.map(ch => {
-        return { ...ch, adaptation: a * ch.fenotype + b }
-        //lub inny wzor
+        return { ...ch, adaptation: params[0] * ch.fenotype * ch.fenotype * ch.fenotype + params[1] * ch.fenotype * ch.fenotype + params[2] * ch.fenotype + params[3] }
     })
 }
 
@@ -25,14 +25,18 @@ const calcParticipation = (chromosomes) => {
         return { ...ch, participation: +(ch.adaptation / sum * 100).toFixed(1) }
     })
     return sortedChromosomes = [...chromosomes].sort((a, b) => a.participation - b.participation);
-
 }
 
 const calcRanges = (chromosomes) => {
     const ranges = [];
     chromosomes.forEach((ch, i) => {
-        if (i === 0) ranges.push({ ...ch, lowerRange: 0, upperRange: ch.participation });
-        else {
+        if (i === 0) {
+            ranges.push({
+                ...ch,
+                lowerRange: 0,
+                upperRange: ch.participation
+            });
+        } else {
             ranges.push({
                 ...ch,
                 lowerRange: +(ranges[i - 1].upperRange + 0.1).toFixed(1),
@@ -52,16 +56,27 @@ const generateShoots = (amount) => {
 const shooting = (chromosomes) => {
     const hitted = [];
     const shoots = generateShoots(chromosomes.length);
-    //console.log(shoots);
     shoots.forEach(shoot => {
-        if (shoot <= chromosomes[0].upperRange) hitted.push(chromosomes[0]);
-        else if (shoot > chromosomes[0].lowerRange && shoot <= chromosomes[1].upperRange) hitted.push(chromosomes[1]);
-        else if (shoot > chromosomes[1].lowerRange && shoot <= chromosomes[2].upperRange) hitted.push(chromosomes[2]);
-        else if (shoot > chromosomes[2].lowerRange && shoot <= chromosomes[3].upperRange) hitted.push(chromosomes[3]);
-        else if (shoot > chromosomes[3].lowerRange && shoot <= chromosomes[4].upperRange) hitted.push(chromosomes[4]);
-        else hitted.push(chromosomes[5]);
+        if (shoot <= chromosomes[0].upperRange) {
+            hitted.push(chromosomes[0]);
+        }
+        else if (shoot > chromosomes[0].lowerRange && shoot <= chromosomes[1].upperRange) {
+            hitted.push(chromosomes[1]);
+        }
+        else if (shoot > chromosomes[1].lowerRange && shoot <= chromosomes[2].upperRange) {
+            hitted.push(chromosomes[2]);
+        }
+        else if (shoot > chromosomes[2].lowerRange && shoot <= chromosomes[3].upperRange) {
+            hitted.push(chromosomes[3]);
+        }
+        else if (shoot > chromosomes[3].lowerRange && shoot <= chromosomes[4].upperRange) {
+            hitted.push(chromosomes[4]);
+        }
+        else {
+            hitted.push(chromosomes[5]);
+        }
     })
-    return hitted; 
+    return hitted;
 }
 
 const shuffle = (array) => {
@@ -71,7 +86,8 @@ const shuffle = (array) => {
         currentIndex--;
         [array[currentIndex], array[randomIndex]] = [
             array[randomIndex], array[currentIndex]];
-    } return array;
+    }
+    return array;
 }
 
 const pairChromosomes = (chromosomes) => {
@@ -104,12 +120,12 @@ const crossing = (pairedChromosomes) => {
 }
 
 const unpair = (chromosomes) => {
-    const unpaired = []; 
+    const unpaired = [];
     chromosomes.forEach(ch => {
         unpaired.push(ch[0]);
         unpaired.push(ch[1]);
     })
-    return unpaired; 
+    return unpaired;
 }
 
 const mutate = (chromosomes) => {
@@ -117,12 +133,15 @@ const mutate = (chromosomes) => {
         let isMutating = Math.random() < 0.2;
         let mutatingIndex = Math.floor(Math.random() * 4) + 1;
         let newItem = ch.chromosome.split('');
-
         if (isMutating) {
-            if (newItem[mutatingIndex] === '0') newItem[mutatingIndex] = '1';
-            else newItem[mutatingIndex] = '0';
+            if (newItem[mutatingIndex] === '0') {
+                newItem[mutatingIndex] = '1';
+            }
+            else {
+                newItem[mutatingIndex] = '0';
+            }
         }
-        return {...ch, chromosome: newItem.join('')}
+        return { ...ch, chromosome: newItem.join('') }
     })
 }
 
@@ -131,29 +150,32 @@ const checkFinalAdaptation = (chromosomes) => {
     const chWithAdaptation = calcAdaptation(chWithFenotypes);
     const sum = chWithAdaptation.map(a => a.adaptation).reduce((a, b) => a + b);
     console.log('Iteration: ' + counter + '. Adaptation function sum: ' + sum);
-    if (sum < 300) {
+    if (counter < 5000) {
         counter += 1
         run(chWithAdaptation);
     }
 }
 
+const startingChromosomes = generateChromosomes(6, 5);
+console.log('Starting chromosomes:');
+console.log(startingChromosomes);
+
 const run = (chromosomes) => {
     const chWithFenotypes = calcFenotypes(chromosomes);
     const chWithAdaptation = calcAdaptation(chWithFenotypes);
-    const chWithParicipation = calcParticipation(chWithAdaptation); 
-    const ranges = calcRanges(chWithParicipation); 
-    const shooted = shooting(ranges); 
-    const paired = pairChromosomes(shooted) ;
-    const crossed = crossing(paired); 
-    const unpaired = unpair(crossed); 
-    const mutated = mutate(unpaired); 
+    const chWithParicipation = calcParticipation(chWithAdaptation);
+    const ranges = calcRanges(chWithParicipation);
+    const shooted = shooting(ranges);
+    const paired = pairChromosomes(shooted);
+    const crossed = crossing(paired);
+    const unpaired = unpair(crossed);
+    const mutated = mutate(unpaired);
     console.log('Chromosomes after crossing and mutation: ');
     console.log(mutated);
     checkFinalAdaptation(mutated);
 }
 
-const startingChromosomes = generateChromosomes(6, 5); 
-console.log('Starting chromosomes:');
-console.log(startingChromosomes);
 
-run(chromosomes); 
+//run(chromosomes); 
+
+
