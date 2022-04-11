@@ -1,31 +1,41 @@
 let counter = 0;
-const params = input("Podaj parametry a, b, c, d dla funkcji").split(' ');
+let bestScore = -Infinity; 
+let bestScoreData; 
+let bestIteration;
+let bestSingleScore = [{adaptation: -Infinity}]; 
+let timeoutRange = 1000; 
+
+let params = prompt("Podaj paramtery A, B, C, D dla f(x) = Ax^3 + Bx^2 +Cx + D:");
+params = params.split(' ').map(p => parseInt(p));
+
+let pk = prompt("Podaj współczynnik prawdopodobieństwa krzyżowania (od 0 do 1)");
+let pm = prompt("Podaj współczynnik prawdopodobieństwa mutacji (od 0 do 1)");
 
 const generateChromosomes = (amount, length) => {
     return chromosomes = Array(amount).fill(0).map((chromosome, i) => {
         return { name: 'ch' + i, chromosome: Array(length).fill(0).map(() => Math.floor(Math.random() * 2)).join('') }
-    })
-}
+    });
+};
 
 const calcFenotypes = (chromosomes) => {
     return chromosomes.map(ch => {
         return { ...ch, fenotype: parseInt(ch.chromosome, 2) }
-    })
-}
+    });
+};
 
 const calcAdaptation = (chromosomes) => {
     return chromosomes.map(ch => {
-        return { ...ch, adaptation: params[0] * ch.fenotype * ch.fenotype * ch.fenotype + params[1] * ch.fenotype * ch.fenotype + params[2] * ch.fenotype + params[3] }
-    })
-}
+        return { ...ch, adaptation: (params[0] * ch.fenotype * ch.fenotype * ch.fenotype) + (params[1] * ch.fenotype * ch.fenotype) + (params[2] * ch.fenotype) + params[3] }
+    });
+};
 
 const calcParticipation = (chromosomes) => {
     const sum = chromosomes.map(a => a.adaptation).reduce((a, b) => a + b);
     chromosomes = chromosomes.map(ch => {
         return { ...ch, participation: +(ch.adaptation / sum * 100).toFixed(1) }
-    })
+    });
     return sortedChromosomes = [...chromosomes].sort((a, b) => a.participation - b.participation);
-}
+};
 
 const calcRanges = (chromosomes) => {
     const ranges = [];
@@ -41,17 +51,17 @@ const calcRanges = (chromosomes) => {
                 ...ch,
                 lowerRange: +(ranges[i - 1].upperRange + 0.1).toFixed(1),
                 upperRange: +(ranges[i - 1].upperRange + ch.participation).toFixed(1),
-            })
-        }
-    })
+            });
+        };
+    });
     return ranges;
-}
+};
 
 const generateShoots = (amount) => {
     return shoots = Array(amount).fill(0).map(shoot => {
         return Math.floor(Math.random() * 99) + 1;
-    })
-}
+    });
+};
 
 const shooting = (chromosomes) => {
     const hitted = [];
@@ -77,7 +87,7 @@ const shooting = (chromosomes) => {
         }
     })
     return hitted;
-}
+};
 
 const shuffle = (array) => {
     let currentIndex = array.length, randomIndex;
@@ -103,7 +113,7 @@ const pairChromosomes = (chromosomes) => {
 
 const crossing = (pairedChromosomes) => {
     return crossed = pairedChromosomes.map(pair => {
-        let isCrossing = Math.random() < 0.8;
+        let isCrossing = Math.random() < pk;
         let crossingIndex = Math.floor(Math.random() * 4) + 1;
         if (!isCrossing) {
             return pair;
@@ -115,9 +125,27 @@ const crossing = (pairedChromosomes) => {
         return [
             { ...pair[0], chromosome: prefix1 + postfix2 },
             { ...pair[1], chromosome: prefix2 + postfix1 }
-        ];
-    });
-}
+        ]
+    })
+};
+
+const crossing2 = (pairedChromosomes) => {
+    return crossed = pairedChromosomes.map(pair => {
+        const isCrossing = Math.random() < pk;
+        const crossingIndex = Math.floor(Math.random() * 4) + 1;
+        if (!isCrossing) {
+            return pair;
+        }
+        return [
+            { ...pair[0], chromosome: 
+                pair[0].chromosome.slice(0, crossingIndex) + pair[1].chromosome.slice(crossingIndex)
+            },
+            { ...pair[1], 
+                chromosome: pair[1].chromosome.slice(0, crossingIndex) + pair[0].chromosome.slice(crossingIndex)
+            }
+        ]
+    })
+};
 
 const unpair = (chromosomes) => {
     const unpaired = [];
@@ -130,9 +158,9 @@ const unpair = (chromosomes) => {
 
 const mutate = (chromosomes) => {
     return chromosomes.map((ch, i) => {
-        let isMutating = Math.random() < 0.2;
-        let mutatingIndex = Math.floor(Math.random() * 4) + 1;
-        let newItem = ch.chromosome.split('');
+        const isMutating = Math.random() < pm;
+        const mutatingIndex = Math.floor(Math.random() * 4) + 1;
+        const newItem = ch.chromosome.split('');
         if (isMutating) {
             if (newItem[mutatingIndex] === '0') {
                 newItem[mutatingIndex] = '1';
@@ -145,24 +173,59 @@ const mutate = (chromosomes) => {
     })
 }
 
+const trimResult = (result) => {
+    return result.map(ch => {
+        return {
+            name: ch.name,
+            chromosome: ch.chromosome,
+            fenotype: ch.fenotype,
+            adaptation: ch.adaptation
+        }
+    })
+}
+
 const checkFinalAdaptation = (chromosomes) => {
     const chWithFenotypes = calcFenotypes(chromosomes);
     const chWithAdaptation = calcAdaptation(chWithFenotypes);
     const sum = chWithAdaptation.map(a => a.adaptation).reduce((a, b) => a + b);
-    console.log('Iteration: ' + counter + '. Adaptation function sum: ' + sum);
-    if (counter < 5000) {
+
+    const sortedChromosomes = chWithAdaptation.slice().sort((a, b) => b.adaptation - a.adaptation); 
+    if (sortedChromosomes[0].adaptation > bestSingleScore[0].adaptation) {
+        bestSingleScore = [{...sortedChromosomes[0], iteration: counter }]; 
+    }
+    
+    if (sum > bestScore) {
+        bestIteration = counter; 
+        bestScore = sum; 
+        bestScoreData = chWithAdaptation.sort((a, b) => a.participation - b.participation);
+    }
+    if (counter < 10000) {
         counter += 1
-        run(chWithAdaptation);
+        if (counter === timeoutRange) {
+            timeoutRange = timeoutRange + 1000; 
+            setTimeout( function() {
+                run(chWithAdaptation);
+            }, 0);
+        } else {
+            run(chWithAdaptation);
+        }
+    } else {
+        //console.log('Iteration ' + counter + '. Result with sum ' + sum + ':');
+        //console.table(trimResult(chWithAdaptation));
+        console.log('Best result at iteration ' + bestIteration + ' with sum ' + bestScore + ':');
+        console.table(trimResult(bestScoreData.sort((a, b) => b.adaptation - a.adaptation))); 
+        console.log('Best candidate:');
+        console.table(trimResult(bestSingleScore))
     }
 }
-
-const startingChromosomes = generateChromosomes(6, 5);
-console.log('Starting chromosomes:');
-console.log(startingChromosomes);
 
 const run = (chromosomes) => {
     const chWithFenotypes = calcFenotypes(chromosomes);
     const chWithAdaptation = calcAdaptation(chWithFenotypes);
+    const sortedChromosomes = chWithAdaptation.slice().sort((a, b) => b.adaptation - a.adaptation); 
+    if (sortedChromosomes[0].adaptation > bestSingleScore[0].adaptation) {
+        bestSingleScore = [{...sortedChromosomes[0], iteration: counter }]; 
+    }
     const chWithParicipation = calcParticipation(chWithAdaptation);
     const ranges = calcRanges(chWithParicipation);
     const shooted = shooting(ranges);
@@ -170,12 +233,13 @@ const run = (chromosomes) => {
     const crossed = crossing(paired);
     const unpaired = unpair(crossed);
     const mutated = mutate(unpaired);
-    console.log('Chromosomes after crossing and mutation: ');
-    console.log(mutated);
     checkFinalAdaptation(mutated);
 }
 
-
-//run(chromosomes); 
+const startingChromosomes = calcAdaptation(calcFenotypes(generateChromosomes(6, 5)));
+const startingSum = startingChromosomes.map(a => a.adaptation).reduce((a, b) => a + b)
+console.log('Starting chromosomes with sum: ' + startingSum + ':');
+console.table(startingChromosomes);
+run(chromosomes); 
 
 
